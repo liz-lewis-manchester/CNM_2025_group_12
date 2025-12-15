@@ -2,11 +2,11 @@ import numpy as np
 from src.advection import (init_grid, check_cfl, upwind_step, apply_boundary, run_simulation)
 
 
-L = 20.0
-dx = 0.2
-U = 0.1
-dt = 10.0
-t_total = 300
+L = 20.0              # domain length
+dx = 0.2              # spatial resolution
+U = 0.1               # velocity
+dt = 10.0             # initial timestep
+t_total = 300         # simulation time (5 minutes)
 
 x, nx = init_grid(L, dx)
 
