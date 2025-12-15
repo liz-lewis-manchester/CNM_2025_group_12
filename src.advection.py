@@ -34,9 +34,30 @@ def run_simulation(theta0, U, dx, dt, t_total, enforce_cfl=True, cfl_max=0.9):
   thetas = np.zeros((nt, nx))
   thetas[0] = theta0.copy()
 
+  # Left boundary (x=0) remains fixed from the initial condition
+  # Right boundary handled by apply_boundary (zero-gradient outflow)
+
   for n in range(1, nt):
     thetas[n] = upwind_step(thetas[n-1], U, dx, dt)
     thetas[n] = apply_boundary(thetas[n])
 
   return times, thetas, dt, cfl
+
+def read_initial_conditions(csv_path):
+  df = pd.read_csv(csv_path, encoding="unicode_escape")
+  if 'x' not in df.columns or 'theta' not in df.columns:
+    df = df.iloc[:, :2]
+    df.columns = ['x', 'theta']
+  df = df.sort_values('x').reset_index(drop=True)
+  return df
+
+def interpolate_to_grid(df, x_grid, kind= 'linear', fill_value =0.0):
+  f  = interp1d(df['x'].values, 
+             df['theta'].values,
+             kind=kind,
+             bounds_error=False,
+             fill_value=fill_value)
+  theta0 = f(x_grid)
+  return theta0 
+  
   
