@@ -1,63 +1,99 @@
+import os
 import numpy as np
 import pandas as pd
-from scipy.interpolate import interp1d
 
 def init_grid(L, dx):
+  # Create 1D spatial grid with spacing dx from 0 to L.
   nx = int(round(L / dx)) + 1
-  x = np.linspace(0, L, nx)
+  x = np.linspace(0.0, float(L), nx)
   return x, nx
 
 def check_cfl(U, dx, dt):
-  return abs(U) * dt/dx
+  # CFL number for advection.
+  return abs(float(U)) * float(dt) / float(dx)
 
 def upwind_step(theta, U, dx, dt):
-  c = U * dt/dx
+  # One explicit upwind step fdr dC/dt + U dC/dx = 0.
+  # Assumes U >= 0 (downstream, positive direction).
+  U = float(U)
+  if U < 0:
+    raise ValueError("upwind_step assumes U>=0. For U<0 you need the opposite upwind direction.")
+  c = U * float(dt) / float (dx)
   theta_new = theta.copy()
-  theta_new[1:] = theta[1:] - c * (theta[1:] - theta[:-1])
+
+  # interior update (i=1...end).
+  theta_new[1:] = theta[1:] - c * (theta[1:] - theta [:-1])
   return theta_new
 
-def apply_boundary(theta):
+
+def apply_boundary_right(theta):
+  # At right edge, the outflow boundary is zero-gradient.
   theta[-1] = theta[-2]
   return theta
 
-def run_simulation(theta0, U, dx, dt, t_total, enforce_cfl=True, cfl_max=0.9):
+def run_simulation(theta0, U, dx, dt, t_total, boundary_left=None, enforce_cfl=True, cfl_max=0.9):
+  # Run advection simulation.
+  # Boundary_left: function boundary_left(t) returning concentration at x=0 for each time t.
+  # If None, x=0 is fixed to its initial value.
+  theta0 = np.asarray(theta0, dtype=float)
   nx = theta0.size
+  
+  # CFL handling
   cfl = check_cfl(U, dx, dt)
-
-  if enforce_cfl and cfl > cfl_max and U !=0:
-    dt = cfl_max * dx / abs(U)
+  if enforce_cfl and (cfl > cfl_max) and (float(U) != 0.0):
+    dt = cfl_max * float(dx) / abs(float((U))
     cfl = check_cfl(U, dx, dt)
 
-  nt = int(round(t_total / dt)) + 1
-  times = np.linspace(0, dt * (nt - 1), nt)
+  nt = int(round(float(t_total) / float(dt))) + 1
+  times = np.linspace(0.0, float(dt) * (nt - 1), nt)
 
-  thetas = np.zeros((nt, nx))
+  thetas = np.zeros((nt, nx), dtype=float)
   thetas[0] = theta0.copy()
 
-  # Left boundary (x=0) remains fixed from the initial condition
-  # Right boundary handled by apply_boundary (zero-gradient outflow)
-
+  # Apply left boundary at t=0 too
+  if boundary_left is not None:
+      thetas[0, 0] = float(boundary_left(times[0]))
+  else:
+      thetas[0, 0] = thetas[0, 0]
+        
   for n in range(1, nt):
     thetas[n] = upwind_step(thetas[n-1], U, dx, dt)
-    thetas[n] = apply_boundary(thetas[n])
 
+    # Left boundary (x=0 inflow)
+    if boundary-left is not None:
+        thetas[n, 0] = float(boundary_left(times[n]))
+    else:
+        thetas[n, 0] = thetas[0, 0] # keep initial value
+        
+    # Right boundary (outflow)
+        thetas[n] = np.maximum(thetas[n], 0.0)
+        
   return times, thetas, dt, cfl
 
 def read_initial_conditions(csv_path):
+  # Reads initial_conditions.csv with ANY two-cloumn header.
+  # Your file: Distance(m), Concentration(...).
+  # We will always take the first two columns and rename them to x, theta.
   df = pd.read_csv(csv_path, encoding="unicode_escape")
-  if 'x' not in df.columns or 'theta' not in df.columns:
-    df = df.iloc[:, :2]
-    df.columns = ['x', 'theta']
-  df = df.sort_values('x').reset_index(drop=True)
+
+  # Always take the first two columns and rename.
+  df = df.iloc[:, :2].copy()
+  df.columns = ["x", "theta"]
+
+  df["x"] = df["x"].astype(float)
+  df["theta"] = df["theta"].astype(float)
+
+  df = df.sort_values("x").reset_index(drop=True)
   return df
 
-def interpolate_to_grid(df, x_grid, kind= 'linear', fill_value =0.0):
-  f  = interp1d(df['x'].values, 
-             df['theta'].values,
-             kind=kind,
-             bounds_error=False,
-             fill_value=fill_value)
-  theta0 = f(x_grid)
-  return theta0 
+def interpolate_to_grid(df, x_grid):
+  # Linear interpolation onto grid using NumPy (no Scipy dependency).
+  # Outside the measured range, fill with 0.
+  x_meas = df["x"].to_numpy(dtype=float)
+  theta_meas = df["theta"].to_numpy(dtype=float)
+
+  theta0 = np.interp(x_grid, x_meas, theta_meas, left=0.0, right=0.0)
+  theta0 = np.maximum(theta0, 0.0)
+  return theta0
   
   
