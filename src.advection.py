@@ -41,7 +41,7 @@ def run_simulation(theta0, U, dx, dt, t_total, boundary_left=None, enforce_cfl=T
   # CFL handling
   cfl = check_cfl(U, dx, dt)
   if enforce_cfl and (cfl > cfl_max) and (float(U) != 0.0):
-    dt = cfl_max * float(dx) / abs(float((U))
+    dt = cfl_max * float(dx) / abs(float((U)))
     cfl = check_cfl(U, dx, dt)
 
   nt = int(round(float(t_total) / float(dt))) + 1
