@@ -72,7 +72,7 @@ def run_simulation(theta0, U, dx, dt, t_total, boundary_left=None, enforce_cfl=T
 
 def read_initial_conditions(csv_path):
   # Reads initial_conditions.csv with ANY two-cloumn header.
-  # Initial conditions: Distance(m), Concentration(...).
+  # Initial conditions: Distance(m), Concentration(µg/m_).
   # We will always take the first two columns and rename them to x, theta.
   df = pd.read_csv(csv_path, encoding="unicode_escape")
 
