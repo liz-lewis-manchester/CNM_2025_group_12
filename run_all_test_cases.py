@@ -43,3 +43,31 @@ boundary_2 = lambda t: float(theta0_2[0])
 times2, thetas2, dt2, cfl2 = run_simulation(theta0_2, U, dx, dt, t_total, boundary_left= boundary_2)
 save_case("tcs2_csv_initial_conditions", times2, thetas2, 
           {"L": L, "dx": dx, "U": U, "dt_used": dt2, "t_total": t_total, "CFL": cfl2})
+
+# Test Case 3
+# Sensitivity ti U, dx, dt
+
+U_list = [0.05, 0.1, 0.2]
+dx_list = [0.1, 0.2, 0.5]
+dt_list = [5.0, 10.0, 20.0]
+
+# Use CSV initial conditions (same as TC2), but re-interpolate for each dx grid
+df_ic = read_initial_conditions("inital_conditions.csv")
+
+case_idx = 0
+for dx_i in dx_list:
+  x_i, nx_i = init_grid(L, dx_i)
+  theta0_1 = interpolate_to_grid(df_ic, x_i)
+  boundary_i = lambda t, th0=float(theta0_i[0]): th0
+  for U_i in U_list:
+    for dt_i in dt_list:
+      case_idx += 1
+      times3, thetas3, dt3_used, cf13 = run_simulation(
+        theta0_i, U_i, dx_i, dt_i, t_total, boundary_left=boundary_i
+      )
+      save_case(
+        f"tc3_sensitivity_{case_idx:02d}_U{U_i}_dx{dx_i}_dt{dt_i}",
+        times3, thetas3,
+        {"L": L, "dx": dx_i, "U": U_i, "dt_requested": dt_i, "dt_used": dt3_used, "t_total": t_total, "CFL": cf13}
+      )
+                                
