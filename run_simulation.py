@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-from src.advection import (init_grid, run_simulation, read_ initial_conditions, interpolate_to_grid)
+from src.advection import (init_grid, run_simulation, read_initial_conditions, interpolate_to_grid)
 
 
 L = 20.0              # domain length (m)
