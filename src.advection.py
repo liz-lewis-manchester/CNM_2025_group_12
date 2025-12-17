@@ -41,7 +41,7 @@ def run_simulation(theta0, U, dx, dt, t_total, boundary_left=None, enforce_cfl=T
   # CFL handling
   cfl = check_cfl(U, dx, dt)
   if enforce_cfl and (cfl > cfl_max) and (float(U) != 0.0):
-    dt = cfl_max * float(dx) / abs(float((U)))
+    dt = cfl_max * float(dx) / abs(float(U))
     cfl = check_cfl(U, dx, dt)
 
   nt = int(round(float(t_total) / float(dt))) + 1
@@ -60,13 +60,13 @@ def run_simulation(theta0, U, dx, dt, t_total, boundary_left=None, enforce_cfl=T
     thetas[n] = upwind_step(thetas[n-1], U, dx, dt)
 
     # Left boundary (x=0 inflow)
-    if boundary-left is not None:
+    if boundary_left is not None:
         thetas[n, 0] = float(boundary_left(times[n]))
     else:
         thetas[n, 0] = thetas[0, 0] # keep initial value
-        
-    # Right boundary (outflow)
-        thetas[n] = np.maximum(thetas[n], 0.0)
+
+  thetas[n] = apply_boundary_right(thetas[n])
+  thetas[n] = np.maximum(thetas[n], 0.0)
         
   return times, thetas, dt, cfl
 
