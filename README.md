@@ -100,7 +100,7 @@ This project was completed as a group.
 - Student names
   - Amna Farooq (11577901)
   - Muhammad Hassan (14106209)
-  - x
+  - Muhammad bin Mukhtar (11626325)
   - x
   - x
 - Civil Engineering (CIVL20471)
