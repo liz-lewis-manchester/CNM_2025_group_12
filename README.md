@@ -80,7 +80,7 @@ pytest
 ## Version Control and Branching 
 GitHub was utilised for all version control and collaboration.
 
-- The `main` branch contains stab;e and reviewed code.
+- The `main` branch contains stable and reviewed code.
 - The `model-core` branch was used for developemt of the core numerical model.
 - The `Task-1` branch was used for implementing specific tasks.
 
