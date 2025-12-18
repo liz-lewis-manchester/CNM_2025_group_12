@@ -118,6 +118,81 @@ def test_4_exponential_decay_reduces_peak(csv_path):
   i = int(round(10.0 / dx))
   assert C_decay[:, i].max() < C_const[:, i].max()
 
+# Test Case 5
+
+def run_time_varying_U(theta0, U_series, dx, dt, t_total, boundary_left=None):
+  theta0 = np.asarray(theta0, float)
+  nx = theta0.size
+  nt = int(round(float(t_total) / float(dt))) + 1
+  times = np.linspace(0.0, float(dt) * (nt - 1), nt)
+
+  thetas = np.zeros((nt, nx), float)
+  thetas[0] = theta0.copy()
+  if boundary_left is not None:
+    thetas[0, 0] = float(boundary_left(times[0]))
+    
+  for n in range(1, nt):
+    thetas[n] = upwind_step(theta[n-1], float(U_series[n]), dx, dt)
+    if boundary_left is not None:
+      thetas[n, 0] = float(boundary_left(times[n]))
+    else:
+      thetas[n,0] = thetas[0,0]
+    thetas[n] = apply_boundary_right(thetas[n])
+    thetas[n] = np.maximum(thetas[n], 0.0)
+    
+  return times, thetas
+
+def test_5_variable_velocity_10pct_reproducible_and_changes_solution(csv_path):
+  """
+  Variable velocity test with 10% random perturbation:
+  - reproducible with fixed seed
+  - different from constant-velocity baseline
+  """
+  L, t_total, dx, dt, U0 = 20.0, 300.0, 0.2, 10.0, 0.1
+  df = read_initial_conditions(csv_path)
+  x, nx = init_grid(L, dx)
+  th = interpolate_to_grid(df, x)
+  boundary_left = lambda t: float(th[0])
+  
+  # baseline constant U  
+  _, C_base, _, _ = run_simulation(th, U0, dx, dt, t_total, boundary_left=boundary_left)
+  
+  rng1 = np.random.default_rng(123)
+  
+  # Try spatial velocity profile U(x) first (preferred interpretation of "velocity profile")
+  U_prof1 = np.maximum(1e-6, U0 * (1.0 + 0.10 * rng1.standard_normal(nx)))
+  rng2 = np.random.default_rng(123)
+  U_prof2 = np.maximum(1e-6, U0 * (1.0 + 0.10 * rng2.standard_normal(nx)))
+  
+  used_profile = True
+  try:
+      _, C_var1, _, _ = run_simulation(th, U_prof1, dx, dt, t_total, boundary_left=boundary_left)
+      _, C_var2, _, _ = run_simulation(th, U_prof1, dx, dt, t_total, boundary_left=boundary_left)
+  except Exception:
+    used_profile = False
+    # Fallback: time-varying scalar U(t)
+    nt = int(round(t_total / ct)) + 1
+    rng1 = np.random.default_rng(123)
+    U_series1 = np.maximum(1e-6, U0 * (1.0 + 0.10 * rng1.standard_normal(nt)))
+    rng2 = np.random.default_rng(123)
+    U_series2 = np.maximum(1e-6, U0 * (1.0 + 0.10 * rng2.standard_normal(nt)))
+    
+    _, C_var1 = run_time_varying_U(th, U_series1, dx, dt, t_total, boundary_left=boundary_left)
+    _, C_var2 = run_time_varying_U(th, U_series2, dx, dt, t_total, boundary_left=boundary_left)
+  
+  # same seed => identical outputs
+  assert np.allclose(C_var1, C_var2)
+  ff
+  # must differ from constant-U baseline
+  mean_abd_diff = float(np.mean(np.abs(C_var1 - C_base)))
+  assert mean_abs_diff > 1e-3
+  
+  
+
+  
+
+  
+
 
 
 
