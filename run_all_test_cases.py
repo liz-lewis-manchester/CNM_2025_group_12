@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-from scr.advection import init_grid, run simulation, read_initial_conditions, interporlate_to_grid
+from src.advection import init_grid, run_simulation, read_initial_conditions, interporlate_to_grid
 
 def save_case(case_id, times,  theta, meta):
   os.makedirs("results", exist_ok=True)
