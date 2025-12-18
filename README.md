@@ -101,7 +101,7 @@ This project was completed as a group.
   - Amna Farooq (11577901)
   - Muhammad Hassan (14106209)
   - Muhammad bin Mukhtar (11626325)
-  - x
+  - Saad Sohail (11414592)
   - x
 - Civil Engineering (CIVL20471)
 
