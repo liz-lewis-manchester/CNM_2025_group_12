@@ -45,29 +45,85 @@ save_case("tcs2_csv_initial_conditions", times2, thetas2,
           {"L": L, "dx": dx, "U": U, "dt_used": dt2, "t_total": t_total, "CFL": cfl2})
 
 # Test Case 3
-# Sensitivity ti U, dx, dt
+def test_refinement_consistency(csv_path):
+  """
+  Sensitivity to spatial/temporal resolution:
+  compare coarse vs finer run (fine interpolated onto coarse grid).
+  """
+  L, t_total, U = 20.0, 300.0, 0.1
+  df = read_initial_condition(csv_path)
+  
+  # coarse
+  dx1, dt1 = 0.2, 10.0
+  x1, _ = init_grid(L, dx1)
+  th1 = interpolate_to_grid(df, x1)
+  b1 = lambda t: float(th1[0])
+  _, C1, _, _ = run_simulation(th2, U, dx2, dt2, t_total, boundary_left=b2)
 
-U_list = [0.05, 0.1, 0.2]
-dx_list = [0.1, 0.2, 0.5]
-dt_list = [5.0, 10.0, 20.0]
+  # compare final profiles (fine -> coarse)
+  C2_final_on_x1 = np.interp(x1, x2, C2[-1])
+  rmse = np.sqrt(np.mean((C1[-1] - C2_final_on_x1) ** 2))
+  
+  # upwind is diffusive; allow some difference, but not huge
+  assert rmse < 50.0
 
-# Use CSV initial conditions (same as TC2), but re-interpolate for each dx grid
-df_ic = read_initial_conditions("inital_conditions.csv")
+def test_3_velocity_arrives_earlier(csv_path):
+  """
+  Sensitivity to velocity U:
+  faster U should make pollutant reach a downstream probe earlier.
+  """
+  L, t_total, dx, dt = 20.0, 300.0, 0.2, 10.0
+  df = read_initial_conditions(csv_path)
+  x, _= init_grid(L, dx)
+  th = interpolate_to_grid(df, x)
+  b = lambda t: float(th[0])
+  
+  _, Cslow, _, _ = run_simulation(th, 0.05, dx, dt, t_total, boundary_left=b)
+  _, Cfast, _, _ = run_simulation(th, 0.20, dx, dt, t_total, boundary_left=b)
+  
+  i = int(round(10.0 / dx))  # 10 m probe
+  thr = 1.0
+  
+  def first_hit(col):
+    hits = np.where(col > thr)[0]
+    return hits[0] if len(hits) else None
+  
+  ts = first_hit(Cslow[:, i])
+  tf = first_hit(Cslow[:, i])
+  
+  assert ts is not None and tf is not None
+  assert tf < ts
 
-case_idx = 0
-for dx_i in dx_list:
-  x_i, nx_i = init_grid(L, dx_i)
-  theta0_1 = interpolate_to_grid(df_ic, x_i)
-  boundary_i = lambda t, th0=float(theta0_i[0]): th0
-  for U_i in U_list:
-    for dt_i in dt_list:
-      case_idx += 1
-      times3, thetas3, dt3_used, cf13 = run_simulation(
-        theta0_i, U_i, dx_i, dt_i, t_total, boundary_left=boundary_i
-      )
-      save_case(
-        f"tc3_sensitivity_{case_idx:02d}_U{U_i}_dx{dx_i}_dt{dt_i}",
-        times3, thetas3,
-        {"L": L, "dx": dx_i, "U": U_i, "dt_requested": dt_i, "dt_used": dt3_used, "t_total": t_total, "CFL": cf13}
-      )
-                                
+# Test Case 4
+
+def test_4_exponential_decay_reduces_peak(csv_path):
+  """
+  Exponentially decaying boundary inflow:
+  C_in(t) = C0 * exp(-t/tau) should reduce downstream peak vs constant inflow.
+  """
+  L, t_total, dx, dt, U = 20.0, 300.0, 0.2, 10.0, 0.1
+  df = read_initial_conditions(csv_path)
+  x, _ = init_grid(L, dx)
+  th = interpolate_to_grid(df, x)
+  
+  C0 = 250.0
+  tau = 60.0 # seconds
+  
+  boundary_const = lambda t: C0
+  boundary_decay = lambda t: C0 * np.exp(-t / tau)
+  
+  _, C_const, _, _ = run_simulation(th, U, dx, dt, t_total, boundary_left=boundary_const)
+  _, C_decay, _, _ = run_simulation(th, U, dx, dt, t_total, boundary_left=boundary_decay)
+  
+  i = int(round(10.0 / dx))
+  assert C_decay[:, i].max() < C_const[:, i].max()
+
+
+
+
+
+  
+  
+
+
+
